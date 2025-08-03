@@ -1,1 +1,56 @@
 @import "tailwindcss";
+
+body {
+  @apply bg-white text-gray-800 font-sans;
+}
+
+.section-padding {
+  @apply py-16 md:py-24;
+}
+
+.card {
+  @apply bg-white rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl;
+}
+
+/* Pulse animation keyframes */
+@keyframes pulse-primary {
+  0% {
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 25px rgba(15, 23, 42, 0.5);
+  }
+  100% {
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.3);
+  }
+}
+
+@keyframes pulse-accent {
+  0% {
+    box-shadow: 0 4px 20px rgba(245, 50, 11, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 30px rgba(245, 11, 11, 0.7);
+  }
+  100% {
+    box-shadow: 0 4px 20px rgba(245, 27, 11, 0.4);
+  }
+}
+
+/* Firefly animation keyframes */
+@keyframes firefly {
+  0% {
+    transform: translate(0, 0) scale(0.5);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(50px, -50px) scale(0);
+    opacity: 0;
+  }
+}
