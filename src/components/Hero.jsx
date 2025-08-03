@@ -26,7 +26,7 @@ const Hero = () => {
     // Add pulse animation to buttons
     const pulseButtons = document.querySelectorAll('.pulse-btn');
     pulseButtons.forEach(button => {
-      if (button.classList.contains('bg-accent')) {
+      if (button.classList.contains('bg-amber-500')) {
         button.style.animation = 'pulse-accent 2s infinite';
       } else {
         button.style.animation = 'pulse-primary 2s infinite';
@@ -101,9 +101,10 @@ const Hero = () => {
             </a>
           </div>
         </div>
-        <div class="md:w-1/2 flex justify-center">
+        {/* Hidden on mobile, visible on md and larger screens */}
+        <div class="md:w-1/2 flex justify-center hidden md:block">
           {/* You can add your logo back here when ready */}
-          <img src="/logo.png" alt="logo" />
+          <img src="/logo.png" alt="logo" class="max-w-full h-auto" />
         </div>
       </div>
     </section>
