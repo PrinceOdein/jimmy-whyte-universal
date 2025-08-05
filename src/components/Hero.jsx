@@ -94,8 +94,11 @@ const Hero = () => {
             ref={el => heroButtons = el}
             class="flex flex-col sm:flex-row gap-4"
           >
-            <a href="#contact">
-              <button class="firefly-btn pulse-btn relative overflow-hidden bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-6 rounded-lg transition duration-300 transform hover:-translate-y-1">
+            <a href="#/qualify">
+              <button onClick={() => {
+                console.log("Amen");
+                window.location.hash = '/qualify';
+              }} class="firefly-btn pulse-btn relative overflow-hidden bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-6 rounded-lg transition duration-300 transform hover:-translate-y-1">
                 Get in Touch
               </button>
             </a>
