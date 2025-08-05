@@ -59,7 +59,7 @@ const Qualify = () => {
     setSubmitMessage('');
     
     try {
-      const response = await fetch('http://localhost:3001/api/leads', {
+      const response = await fetch('https://jimmy-whyte-universal-backend.onrender.com/api/leads', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
