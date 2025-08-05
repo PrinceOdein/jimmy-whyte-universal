@@ -17,6 +17,7 @@
   "dependencies": {
     "@motionone/solid": "^10.16.4",
     "@solidjs/router": "^0.15.3",
+    "@supabase/supabase-js": "^2.53.0",
     "@tailwindcss/vite": "^4.1.11",
     "gsap": "^3.13.0",
     "solid-js": "^1.9.5",
