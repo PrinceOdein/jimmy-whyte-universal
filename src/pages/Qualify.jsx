@@ -84,7 +84,29 @@ const Qualify = () => {
       }
 
       console.log('Lead saved to Supabase:', data);
-      setSubmitMessage('Thank you! Your information has been submitted successfully. We will contact you shortly.');
+    
+      setSubmitMessage('Thank you! Redirecting to schedule your call...');
+    
+    // 2. Wait a moment for user to see the message
+    await new Promise(resolve => setTimeout(resolve, 1500)); 
+    
+    // 3. Redirect to Calendly
+    // IMPORTANT: Replace 'your-calendly-username' and 'your-event-type' 
+    // with your actual Calendly details obtained from your Calendly dashboard
+    const calendlyUrl = 'https://calendly.com/odeinanyanwu/discovery-call';
+    
+    // Optional: Pre-fill Calendly with user info for a smoother experience
+    const prefillParams = new URLSearchParams({
+      name: formData().name,
+      email: formData().email,
+      // Add 'phone' or other fields if your Calendly event supports them
+    }).toString();
+    
+    const fullRedirectUrl = `${calendlyUrl}?${prefillParams}`;
+    
+    // Redirect user to Calendly
+    window.location.href = fullRedirectUrl;
+    
       // Optional: Reset form after successful submission
       // setFormData({
       //   name: '',
