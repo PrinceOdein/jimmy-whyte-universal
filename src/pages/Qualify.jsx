@@ -112,7 +112,7 @@ const Qualify = () => {
         // Add 'phone' or other fields if your Calendly event supports them
       }).toString();
       
-      const fullRedirectUrl = `${calendlyUrl}?${prefillParams}`;
+      // const fullRedirectUrl = `${calendlyUrl}?${prefillParams}`;
       
       // Redirect user to Calendly
       window.location.href = '#/thank-you';
