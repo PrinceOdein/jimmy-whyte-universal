@@ -23,7 +23,7 @@ const Qualify = () => {
     projectDetails: '',
     servicesInterested: [],
     // --- ADD BOOKING PREFERENCE FIELD ---
-    bookingPreference: ''
+    // bookingPreference: ''
     // --- ---
   });
 
@@ -80,7 +80,7 @@ const Qualify = () => {
         // If using JSONB column in Supabase, you might pass the array directly
         services_interested: JSON.stringify(formData().servicesInterested), // Match DB column name
         // --- ADD BOOKING PREFERENCE TO SUBMISSION DATA ---
-        booking_preference: formData().bookingPreference || null // Match DB column name
+        // booking_preference: formData().bookingPreference || null // Match DB column name
         // --- ---
       };
 
@@ -427,10 +427,10 @@ const Qualify = () => {
                   </div>
                 </div>
                 {/* --- ADD BOOKING PREFERENCE TO REVIEW --- */}
-                <div>
+                {/* <div>
                   <div class="font-medium text-gray-500 mb-1">Booking Preference:</div>
                   <div>{formData().bookingPreference || 'Not provided'}</div>
-                </div>
+                </div> */}
                 {/* --- --- */}
               </div>
             </div>
