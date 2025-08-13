@@ -4,6 +4,7 @@ import './index.css';
 // Make sure these component files exist in src/pages/
 import Home from './pages/Home'; 
 import Qualify from './pages/Qualify';
+import ThankYou from './pages/ThankYou'; // Import the ThankYou component
 
 function App() {
   // Signal to track which view to show
@@ -16,6 +17,10 @@ function App() {
     
     if (hash === '/qualify') {
       setCurrentView('qualify');
+    // --- ADD THIS CONDITION FOR THE THANK YOU PAGE ---
+    } else if (hash === '/thank-you') {
+      setCurrentView('thankyou');
+    // --- ---
     } else {
       // Default to home for any other hash or no hash
       setCurrentView('home');
@@ -45,6 +50,10 @@ function App() {
       
       {/* Show Qualify component when currentView is 'qualify' */}
       {currentView() === 'qualify' && <Qualify />}
+      
+      {/* --- ADD THIS LINE TO SHOW THE THANK YOU COMPONENT --- */}
+      {currentView() === 'thankyou' && <ThankYou />}
+      {/* {/* --- --- */}
     </div>
   );
 }

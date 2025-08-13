@@ -115,7 +115,7 @@ const Qualify = () => {
       const fullRedirectUrl = `${calendlyUrl}?${prefillParams}`;
       
       // Redirect user to Calendly
-      window.location.href = fullRedirectUrl;
+      window.location.href = '#/thank-you';
       // --- ---
       
       // Optional: Reset form after successful submission
