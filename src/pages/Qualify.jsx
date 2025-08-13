@@ -2,8 +2,10 @@
 import { createSignal } from 'solid-js';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabaseClient'; // Adjust path if needed
+// import { onMount } from 'solid-js';
 
 const Qualify = () => {
+
   // --- State Management ---
   const [currentStep, setCurrentStep] = createSignal(0);
   // --- ADD THE MISSING SIGNALS HERE ---
@@ -19,7 +21,10 @@ const Qualify = () => {
     website: '',
     revenueRange: '',
     projectDetails: '',
-    servicesInterested: []
+    servicesInterested: [],
+    // --- ADD BOOKING PREFERENCE FIELD ---
+    bookingPreference: ''
+    // --- ---
   });
 
   // Handle next step with validation
@@ -37,11 +42,13 @@ const Qualify = () => {
       alert('Please select your Revenue Range');
       return;
     }
-    if (currentStep() < 7) {
+    // --- UPDATE STEP COUNT ---
+    if (currentStep() < 8) { // Now 9 steps total (0-8)
       setCurrentStep(currentStep() + 1);
     } else {
       handleSubmit(); // Submit on final step
     }
+    // --- ---
   };
 
   // Handle previous step
@@ -71,7 +78,10 @@ const Qualify = () => {
         project_details: formData().projectDetails || null, // Match DB column name
         // Convert array to JSON string for storage in a text column
         // If using JSONB column in Supabase, you might pass the array directly
-        services_interested: JSON.stringify(formData().servicesInterested) // Match DB column name
+        services_interested: JSON.stringify(formData().servicesInterested), // Match DB column name
+        // --- ADD BOOKING PREFERENCE TO SUBMISSION DATA ---
+        booking_preference: formData().bookingPreference || null // Match DB column name
+        // --- ---
       };
 
       // Insert data into the 'leads' table
@@ -84,29 +94,30 @@ const Qualify = () => {
       }
 
       console.log('Lead saved to Supabase:', data);
-    
+      // --- UPDATED SUCCESS MESSAGE AND REDIRECT ---
       setSubmitMessage('Thank you! Redirecting to schedule your call...');
     
-    // 2. Wait a moment for user to see the message
-    await new Promise(resolve => setTimeout(resolve, 1500)); 
-    
-    // 3. Redirect to Calendly
-    // IMPORTANT: Replace 'your-calendly-username' and 'your-event-type' 
-    // with your actual Calendly details obtained from your Calendly dashboard
-    const calendlyUrl = 'https://calendly.com/odeinanyanwu/discovery-call';
-    
-    // Optional: Pre-fill Calendly with user info for a smoother experience
-    const prefillParams = new URLSearchParams({
-      name: formData().name,
-      email: formData().email,
-      // Add 'phone' or other fields if your Calendly event supports them
-    }).toString();
-    
-    const fullRedirectUrl = `${calendlyUrl}?${prefillParams}`;
-    
-    // Redirect user to Calendly
-    window.location.href = fullRedirectUrl;
-    
+      // 2. Wait a moment for user to see the message
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
+      
+      // 3. Redirect to Calendly
+      // IMPORTANT: Replace 'your-calendly-username' and 'your-event-type' 
+      // with your actual Calendly details obtained from your Calendly dashboard
+      const calendlyUrl = 'https://calendly.com/odeinanyanwu/discovery-call'; // Removed extra spaces
+      
+      // Optional: Pre-fill Calendly with user info for a smoother experience
+      const prefillParams = new URLSearchParams({
+        name: formData().name,
+        email: formData().email,
+        // Add 'phone' or other fields if your Calendly event supports them
+      }).toString();
+      
+      const fullRedirectUrl = `${calendlyUrl}?${prefillParams}`;
+      
+      // Redirect user to Calendly
+      window.location.href = fullRedirectUrl;
+      // --- ---
+      
       // Optional: Reset form after successful submission
       // setFormData({
       //   name: '',
@@ -116,7 +127,8 @@ const Qualify = () => {
       //   website: '',
       //   revenueRange: '',
       //   projectDetails: '',
-      //   servicesInterested: []
+      //   servicesInterested: [],
+      //   bookingPreference: ''
       // });
       // You might also want to redirect or show a final "thank you" state
 
@@ -151,13 +163,15 @@ const Qualify = () => {
           {/* Progress bar */}
           <div class="mb-8">
             <div class="w-full bg-gray-200 rounded-full h-2.5">
+              {/* --- UPDATE PROGRESS BAR MAX --- */}
               <div 
                 class="bg-red-600 h-2.5 rounded-full transition-all duration-500 ease-out" 
-                style={{ width: `${((currentStep() + 1) / 8) * 100}%` }}
+                style={{ width: `${((currentStep() + 1) / 9) * 100}%` }} // Now 9 steps
               ></div>
             </div>
             <div class="flex justify-between text-sm text-gray-500 mt-2">
-              <span>Step {currentStep() + 1} of 8</span>
+              {/* --- UPDATE STEP COUNT DISPLAY --- */}
+              <span>Step {currentStep() + 1} of 9</span>
             </div>
           </div>
 
@@ -346,8 +360,32 @@ const Qualify = () => {
             </div>
           )}
 
-          {/* Step 7: Review Information */}
+          {/* Step 7: Booking Preference (NEW STEP) */}
           {currentStep() === 6 && (
+            <div class="transition-opacity duration-300">
+              <h1 class="text-3xl font-bold mb-2">When would you like to schedule your discovery call?</h1>
+              <p class="text-gray-600 mb-6">Let us know your availability so we can coordinate a convenient time.</p>
+                <div class="relative w-full" style="padding-bottom:calc(600px + 1em);"> {/* Responsive container */}
+                  <iframe
+                    src="https://cal.com/anyanwujedi/discovery-call"
+                    // Example: src="https://cal.com/odeinanyanwu/discovery-call"
+                    style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;"
+                    frameborder="0"
+                    allowfullscreen
+                    title="Schedule a meeting with us"
+                  ></iframe>
+                </div>
+                {/* --- --- */}
+              
+              {/* Optional: Add a note below the widget */}
+              <p class="text-gray-500 text-sm mt-4 text-center">
+                Having trouble? <a href="mailto:youremail@example.com" class="text-red-500 hover:underline">Contact us</a>.
+              </p>
+            </div>
+          )}
+
+          {/* Step 8: Review Information */}
+          {currentStep() === 7 && (
             <div class="transition-opacity duration-300">
               <h1 class="text-3xl font-bold mb-2">Here's a summary of the information you provided:</h1>
               <p class="text-gray-600 mb-6">Please review and make any necessary changes before submitting.</p>
@@ -380,7 +418,7 @@ const Qualify = () => {
                   <div class="font-medium text-gray-500 mb-1">Project Details:</div>
                   <div>{formData().projectDetails || 'Not provided'}</div>
                 </div>
-                <div>
+                <div class="border-b pb-3">
                   <div class="font-medium text-gray-500 mb-1">Services Interested:</div>
                   <div>
                     {formData().servicesInterested.length > 0 
@@ -388,12 +426,18 @@ const Qualify = () => {
                       : 'None selected'}
                   </div>
                 </div>
+                {/* --- ADD BOOKING PREFERENCE TO REVIEW --- */}
+                <div>
+                  <div class="font-medium text-gray-500 mb-1">Booking Preference:</div>
+                  <div>{formData().bookingPreference || 'Not provided'}</div>
+                </div>
+                {/* --- --- */}
               </div>
             </div>
           )}
 
-          {/* Step 8: Submit Confirmation */}
-          {currentStep() === 7 && (
+          {/* Step 9: Submit Confirmation */}
+          {currentStep() === 8 && (
             <div class="transition-opacity duration-300 text-center">
               <h1 class="text-3xl font-bold mb-4">Thanks for sharing those details!</h1>
               <p class="text-gray-600 mb-8">Are you ready to submit your information?</p>
@@ -419,7 +463,8 @@ const Qualify = () => {
             >
               Back
             </button>
-            {currentStep() < 7 ? (
+            {/* --- UPDATE BUTTON LOGIC FOR NEW STEP COUNT --- */}
+            {currentStep() < 8 ? ( // Now 9 steps (0-8), so < 8 for Continue button
               <button
                 onClick={nextStep}
                 class="bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 px-6 rounded-lg transition duration-300 text-sm"
@@ -446,6 +491,7 @@ const Qualify = () => {
                 ) : 'Submit Project'}
               </button>
             )}
+            {/* --- --- */}
           </div>
 
           {/* Submission Message */}

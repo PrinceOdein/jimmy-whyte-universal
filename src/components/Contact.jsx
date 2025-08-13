@@ -55,9 +55,9 @@ const Contact = () => {
           <p class="text-xl mb-8 text-gray-600">
             Book your free 30-minute strategy session today.
           </p>
-          <button class="contact-cta contact-firefly relative overflow-hidden bg-red-500 hover:bg-red-600 text-white font-medium py-4 px-8 rounded-lg transition duration-300 transform hover:-translate-y-1 text-lg">
+          <a href="#/qualify">          <button class="contact-cta contact-firefly relative overflow-hidden bg-red-500 hover:bg-red-600 text-white font-medium py-4 px-8 rounded-lg transition duration-300 transform hover:-translate-y-1 text-lg">
             Schedule Your Free Call
-          </button>
+          </button></a>
         </div>
       </div>
     </section>

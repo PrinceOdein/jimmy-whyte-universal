@@ -169,7 +169,7 @@ const Services = () => {
         
         {/* Enhanced CTA Section */}
         <div class="text-center mt-16">
-          <a href="#contact">
+          <a href="#/qualify">
             <button class="services-cta firefly-btn relative overflow-hidden bg-red-500 hover:bg-red-600 text-white font-medium py-4 px-8 rounded-lg transition duration-300 transform hover:-translate-y-1 text-lg">
               Start Your Project Today
             </button>

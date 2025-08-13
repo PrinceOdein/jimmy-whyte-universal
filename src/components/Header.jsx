@@ -72,7 +72,7 @@ const Header = () => {
           
           <div class="hidden md:block">
             <button class="contact-cta firefly-btn relative overflow-hidden bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition duration-300 transform hover:-translate-y-0.5">
-              <a href="#contact">Contact</a>
+              <a href="#/qualify">Contact</a>
             </button>
           </div>
           
