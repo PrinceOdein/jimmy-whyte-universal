@@ -360,29 +360,33 @@ const Qualify = () => {
             </div>
           )}
 
-          {/* Step 7: Booking Preference (NEW STEP) */}
-          {currentStep() === 6 && (
-            <div class="transition-opacity duration-300">
-              <h1 class="text-3xl font-bold mb-2">When would you like to schedule your discovery call?</h1>
-              <p class="text-gray-600 mb-6">Let us know your availability so we can coordinate a convenient time.</p>
-                <div class="relative w-full" style="padding-bottom:calc(600px + 1em);"> {/* Responsive container */}
-                  <iframe
-                    src="https://cal.com/anyanwujedi/discovery-call"
-                    // Example: src="https://cal.com/odeinanyanwu/discovery-call"
-                    style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;"
-                    frameborder="0"
-                    allowfullscreen
-                    title="Schedule a meeting with us"
-                  ></iframe>
-                </div>
-                {/* --- --- */}
-              
-              {/* Optional: Add a note below the widget */}
-              <p class="text-gray-500 text-sm mt-4 text-center">
-                Having trouble? <a href="mailto:youremail@example.com" class="text-red-500 hover:underline">Contact us</a>.
-              </p>
-            </div>
-          )}
+          {/* Step 7: Booking Preference (NEW STEP) - REPLACE ENTIRE STEP CONTENT */}
+{currentStep() === 6 && (
+  <div class="transition-opacity duration-300">
+    <h1 class="text-3xl font-bold mb-2">When would you like to schedule your discovery call?</h1>
+    <p class="text-gray-600 mb-6">Let us know your availability so we can coordinate a convenient time.</p>
+
+    {/* Cal.com Inline Widget Container */}
+    <div class="relative w-full" style="padding-bottom:calc(600px + 1em);"> {/* Responsive container - Adjust 600px if needed */}
+      <iframe
+        // --- IMPORTANT: Ensure the URL is correct and remove trailing spaces ---
+        src="https://cal.com/anyanwujedi/discovery-call"
+        // Example: src="https://cal.com/odeinanyanwu/discovery-call"
+        style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;"
+        frameborder="0"
+        allowfullscreen
+        title="Schedule a meeting with us"
+      ></iframe>
+    </div>
+    {/* --- --- */}
+
+    {/* Optional: Add a note below the widget */}
+    <p class="text-gray-500 text-sm mt-4 text-center">
+      Having trouble? <a href="mailto:youremail@example.com" class="text-red-500 hover:underline">Contact us</a>.
+    </p>
+  </div>
+)}
+{/* --- END OF CAL.COM EMBED CODE REPLACEMENT --- */}
 
           {/* Step 8: Review Information */}
           {currentStep() === 7 && (
