@@ -42,7 +42,7 @@ export default async function handler(request, response) {
         // --- Construct the Cal.com API URL ---
         // IMPORTANT: Check Cal.com API documentation for the EXACT endpoint and parameters.
         // This is a hypothetical endpoint structure.
-        let apiUrl = `${CALCOM_API_BASE_URL}slots?apiKey=${CALCOM_API_KEY}&eventTypeSlug=${encodeURIComponent(eventTypeSlug)}`;
+        let apiUrl = `${CALCOM_API_BASE_URL}/v2/slots?apiKey=${CALCOM_API_KEY}&eventTypeSlug=${encodeURIComponent(eventTypeSlug)}`;
 
         // Add optional parameters if provided
         if (startTime) {
