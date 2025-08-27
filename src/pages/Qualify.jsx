@@ -175,9 +175,9 @@ const Qualify = () => {
         website: formData().website || null,
         revenue_range: formData().revenueRange,
         project_details: formData().projectDetails || null,
-        services_interested: JSON.stringify(formData().servicesInterested),
+        services_interested: formData().servicesInterested,
         // --- SAVE BOOKING INTENT ---
-        selected_booking_slot: formData().selectedTimeSlot ? JSON.stringify(formData().selectedTimeSlot) : null,
+        //selected_booking_slot: formData().selectedTimeSlot ? JSON.stringify(formData().selectedTimeSlot) : null,
         // --- ---
       };
 
@@ -507,99 +507,41 @@ const Qualify = () => {
             )}
 
             {/* Step 8: Custom Booking Selection */}
-            {currentStep() === 7 && (
-              <div class="transition-opacity duration-300">
-                <h1 class="text-3xl font-bold mb-2">When would you like to schedule your discovery call?</h1>
-                <p class="text-gray-600 mb-6">Select a convenient time slot below.</p>
+             {/* Step 8: Schedule Your Call (Embedded Cal.com with Prefill) - REPLACE ENTIRE STEP 8 CONTENT */}
+{currentStep() === 7 && (
+  <div class="transition-opacity duration-300">
+    <h1 class="text-3xl font-bold mb-4">Schedule Your Discovery Call</h1>
+    <p class="text-gray-600 mb-6">Thanks for sharing those details, {formData().name || 'there'}! Let's find a time that works best for you.</p>
 
-                {/* Loading State */}
-                {isFetchingSlots() && (
-                  <div class="flex flex-col items-center justify-center py-10">
-                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 mb-4"></div>
-                    <p class="text-gray-600">Loading available times...</p>
-                  </div>
-                )}
+    {/* Cal.com Inline Widget Container */}
+    <div class="relative w-full" style="padding-bottom:calc(650px + 1em);"> {/* Responsive container - Adjust height if needed */}
+      {/* --- DYNAMIC IFRAME SRC WITH PREFILL --- */}
+      <iframe
+        src={
+          `https://cal.com/anyanwujedi/discovery-call?` +
+          `name=${encodeURIComponent(formData().name || '')}&` +
+          `email=${encodeURIComponent(formData().email || '')}`
+          // Add more prefill fields if Cal.com supports them, e.g.:
+          // `company=${encodeURIComponent(formData().company || '')}&`
+          // Ensure formData().name and formData().email exist and have values
+        }
+        style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;"
+        frameborder="0"
+        allowfullscreen
+        title="Schedule a meeting with us"
+        // Optional: Add loading="lazy" if iframe is far down the page
+        loading="lazy"
+      ></iframe>
+      {/* --- --- */}
+    </div>
 
-                {/* Error State */}
-                {!isFetchingSlots() && slotFetchError() && (
-                  <div class="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-                    <p class="font-medium">Error Loading Slots:</p>
-                    <p class="mb-2">{slotFetchError()}</p>
-                    <button
-                      onClick={() => fetchAvailableSlots('discovery-call')} // Retry with correct slug
-                      class="mt-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-1 px-3 rounded transition"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                )}
-
-                {/* Slots Display (if fetched successfully and have slots) */}
-                {!isFetchingSlots() && !slotFetchError() && availableTimeSlots().length > 0 && (
-                  <div class="mb-6">
-                    <h2 class="text-xl font-semibold mb-4">Available Times</h2>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {availableTimeSlots().map((slot) => {
-                        // --- FORMAT SLOT DATE/TIME NICELY ---
-                        // Adjust formatting based on the actual structure of your slot object
-                        let displayDate = 'Invalid Date';
-                        let displayTime = 'Invalid Time';
-                        try {
-                          // Example assuming slot has 'date' (YYYY-MM-DD) and 'time' (HH:MM) strings
-                          const slotDateTime = new Date(`${slot.date}T${slot.time}:00Z`); // Assume UTC if no offset
-                          displayDate = slotDateTime.toLocaleDateString([], {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric'
-                          });
-                          displayTime = slotDateTime.toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            timeZoneName: 'short' // Shows timezone abbreviation
-                          });
-                        } catch (e) {
-                          console.error("Error formatting slot datetime:", e, slot);
-                          displayDate = slot.date || 'Unknown Date';
-                          displayTime = slot.time || 'Unknown Time';
-                        }
-                        // --- ---
-
-                        return (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setFormData({ ...formData(), selectedTimeSlot: slot });
-                              console.log("Selected slot:", slot);
-                            }}
-                            class={`p-3 rounded-lg border text-left text-sm transition-all duration-200 ease-in-out ${
-                              formData().selectedTimeSlot?.id === slot.id // Check using the unique ID
-                                ? 'bg-red-500 text-white border-red-500 shadow-md transform scale-[1.02]'
-                                : 'border-gray-300 hover:border-red-500 hover:bg-red-50 hover:shadow-sm'
-                            }`}
-                          >
-                            <div class="font-medium">{displayDate}</div>
-                            <div class="text-xs opacity-90">{displayTime}</div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* No Slots Available Message */}
-                {!isFetchingSlots() && !slotFetchError() && availableTimeSlots().length === 0 && !isFetchingSlots() && (
-                  <div class="text-center py-8 text-gray-500">
-                    <p class="mb-2">No available time slots found.</p>
-                    <p class="text-sm">Please try again later or contact us directly.</p>
-                  </div>
-                )}
-
-                {/* Optional: Add a note below the slots */}
-                <p class="text-gray-500 text-sm mt-4 text-center">
-                  Can't find a suitable time? <a href="mailto:youremail@example.com" class="text-red-500 hover:underline">Contact us</a>.
-                </p>
-              </div>
-            )}
+    {/* Optional: Add a note below the widget */}
+    <p class="text-gray-500 text-sm mt-4 text-center">
+      Having trouble? <a href={`mailto:${formData().email || 'youremail@example.com'}`} class="text-red-500 hover:underline">Contact us</a>.
+    </p>
+  </div>
+)}
+{/* --- END OF CAL.COM EMBED CODE REPLACEMENT --- */}
 
           </div>
 

@@ -15,11 +15,12 @@
     "vite-plugin-solid": "^2.11.6"
   },
   "dependencies": {
-    "@motionone/solid": "^10.16.4",
+    "@calcom/embed-react": "^1.5.3",
     "@solidjs/router": "^0.15.3",
     "@supabase/supabase-js": "^2.53.0",
     "@tailwindcss/vite": "^4.1.11",
     "gsap": "^3.13.0",
+    "node-fetch": "^3.3.2",
     "solid-js": "^1.9.5",
     "solid-motionone": "^1.0.4",
     "tailwindcss": "^4.1.11"
