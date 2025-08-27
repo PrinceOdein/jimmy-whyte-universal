@@ -7,6 +7,7 @@ import Qualify from './pages/Qualify';
 import ThankYou from './pages/ThankYou'; // Import the ThankYou component
 
 function App() {
+  ///jiu
   // Signal to track which view to show
   const [currentView, setCurrentView] = createSignal('home');
 
