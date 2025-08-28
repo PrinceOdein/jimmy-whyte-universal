@@ -1,13 +1,13 @@
 // src/pages/Qualify.jsx
-import { createSignal, createEffect } from 'react';
+import { useState, createEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import { supabase } from '../lib/supabaseClient';
 
 const Qualify = () => {
   // --- State Management ---
-  const [currentStep, setCurrentStep] = createSignal(0);
-  const [formData, setFormData] = createSignal({
+  const [currentStep, setCurrentStep] = useState(0);
+  const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
@@ -20,14 +20,14 @@ const Qualify = () => {
     selectedTimeSlot: null, // To store the selected slot object
     // --- ---
   });
-  const [isSubmitting, setIsSubmitting] = createSignal(false);
-  const [submitMessage, setSubmitMessage] = createSignal('');
-  const [direction, setDirection] = createSignal('forward'); // For animation direction
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [direction, setDirection] = useState('forward'); // For animation direction
 
   // --- ADDITIONAL STATE FOR BOOKING ---
-  const [isFetchingSlots, setIsFetchingSlots] = createSignal(false);
-  const [availableTimeSlots, setAvailableTimeSlots] = createSignal([]); // Array of slot objects from API
-  const [slotFetchError, setSlotFetchError] = createSignal(null);
+  const [isFetchingSlots, setIsFetchingSlots] = useState(false);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]); // Array of slot objects from API
+  const [slotFetchError, setSlotFetchError] = useState(null);
   // --- ---
 
   const navigate = useNavigate();
