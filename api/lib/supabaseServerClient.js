@@ -6,8 +6,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // --- IMPORTANT: GET VALUES FROM VERCEL ENVIRONMENT VARIABLES ---
 // These MUST be set in your Vercel project settings for the function to work
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY; // Use the SERVICE ROLE key, NOT the anon key
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Use the SERVICE ROLE key, NOT the anon key
 
 console.log("Initializing Supabase client for backend function with URL:", supabaseUrl); // Debug log
 
