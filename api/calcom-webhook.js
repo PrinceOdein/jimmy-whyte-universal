@@ -1,5 +1,67 @@
 // api/calcom-webhook.js (Vercel Serverless Function example)
-import { supabase } from './supabaseServerClient'; // Adjust path
+// import { supabase } from './supabaseServerClient'; // Adjust path
+// api/calcom-webhook.js
+// --- REMOVE THE IMPORT LINE ---
+// import supabase from './supabaseServerClient'; // <-- DELETE THIS LINE
+// --- ---
+
+// --- ADD SUPABASE CLIENT INITIALIZATION INLINE ---
+import { createClient } from '@supabase/supabase-js'; // Make sure @supabase/supabase-js is in your backend package.json dependencies
+
+// Get Supabase credentials from environment variables (set in Vercel)
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Use the SERVICE ROLE key
+
+// Basic validation
+if (!supabaseUrl) {
+    console.error("❌ CRITICAL: SUPABASE_URL is not set in Vercel environment variables for api/calcom-webhook.js.");
+    // You might throw an error here to halt the function if URL is critical
+}
+
+if (!supabaseServiceRoleKey) {
+    console.error("❌ CRITICAL: SUPABASE_SERVICE_ROLE_KEY is not set in Vercel environment variables for api/calcom-webhook.js.");
+    // You might throw an error here to halt the function if key is critical
+}
+
+// Create the Supabase client instance directly in this file
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+    detectSessionInUrl: false
+  }
+});
+console.log("Initialized Supabase client for webhook with URL:", supabaseUrl); // Debug log
+// --- END OF INLINE INITIALIZATION ---
+
+// ... rest of your webhook handler code remains the same ...
+// Just make sure you use the `supabase` client instance you created above
+// e.g., const { data, error } = await supabase.from('leads').insert([supabaseBookingRecord]);
+
+export default async function handler(request, response) {
+  // ... your existing logic ...
+  
+  // Example usage of the inline supabase client
+  try {
+    // ... process Cal.com data ...
+    const supabaseBookingRecord = {
+      // ... map fields ...
+    };
+
+    const { data, error: insertError } = await supabase
+      .from('leads') // Your table name
+      .insert([supabaseBookingRecord])
+      .select();
+
+    if (insertError) throw insertError;
+
+    console.log('Booking recorded successfully in Supabase:', data);
+    return response.status(200).json({ message: 'Booking recorded and lead updated' });
+      
+  } catch (error) {
+    // ... error handling ...
+  }
+}
 
 export default async function handler(request, response) {
   if (request.method !== 'POST') {
