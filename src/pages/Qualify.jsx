@@ -1,23 +1,13 @@
 // src/pages/Qualify.jsx
-import { createSignal, createEffect } from 'solid-js';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
 import Header from '../components/Header';
-import { supabase } from '../lib/supabaseClient'; // Adjust path if needed
 
 const Qualify = () => {
-  // --- State Management ---
-  const [currentStep, setCurrentStep] = createSignal(0);
-  const [isSubmitting, setIsSubmitting] = createSignal(false);
-  const [submitMessage, setSubmitMessage] = createSignal('');
-  const [direction, setDirection] = createSignal('forward'); // For animation direction
-
-  // --- ADDITIONAL STATE FOR BOOKING ---
-  const [isFetchingSlots, setIsFetchingSlots] = createSignal(false);
-  const [availableTimeSlots, setAvailableTimeSlots] = createSignal([]); // Array of slot objects from API
-  const [slotFetchError, setSlotFetchError] = createSignal(null);
-  // --- ---
-
-  // Store all form data including booking intent
-  const [formData, setFormData] = createSignal({
+  // --- State Management (React useState) ---
+  const [currentStep, setCurrentStep] = useState(0);
+  const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
@@ -26,137 +16,384 @@ const Qualify = () => {
     revenueRange: '',
     projectDetails: '',
     servicesInterested: [],
-    // --- ADD BOOKING RELATED FIELD ---
-    selectedTimeSlot: null, // To store the selected slot object
-    // --- ---
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
+  
+  // --- ADDITIONAL STATE FOR BOOKING ---
+  const [isFetchingSlots, setIsFetchingSlots] = useState(false);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState([]);
+  const [slotFetchError, setSlotFetchError] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState(null); // For storing the selected slot
+  
+  const navigate = useNavigate();
 
-  // --- FETCHING LOGIC FOR CAL.COM SLOTS ---
-  /**
-   * Fetches available time slots from the Cal.com API via the backend proxy.
-   * @param {string} eventTypeSlug - The slug of the Cal.com event type to fetch slots for.
-   */
-  const fetchAvailableSlots = async (eventTypeSlug = 'discovery-call') => { // Default to your event type
-    setIsFetchingSlots(true);
-    setSlotFetchError(null);
-    setAvailableTimeSlots([]); // Clear previous slots
+  // --- Define Conversation Steps ---
+  const steps = [
+    {
+      id: 'intro',
+      title: "Hi there! I'm excited to learn about your project.",
+      subtitle: "Let's start with a few quick questions.",
+      component: () => (
+        <div className="text-center py-6">
+          <p className="text-lg">This will help us understand your needs.</p>
+        </div>
+      ),
+      required: [],
+    },
+    {
+      id: 'contact',
+      title: "What's your name?",
+      subtitle: "And how can we reach you?",
+      component: () => (
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+            <input
+              id="name"
+              type="text"
+              placeholder="e.g., Alex Johnson"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition"
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+            />
+          </div>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+            <input
+              id="email"
+              type="email"
+              placeholder="e.g., alex@company.com"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+            />
+          </div>
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+            <input
+              id="phone"
+              type="tel"
+              placeholder="e.g., +1 (555) 123-4567"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition"
+              value={formData.phone}
+              onChange={(e) => setFormData({...formData, phone: e.target.value})}
+            />
+          </div>
+        </div>
+      ),
+      required: ['name', 'email', 'phone'],
+    },
+    {
+      id: 'company',
+      title: "Tell me about your company.",
+      subtitle: "This helps us understand your business context.",
+      component: () => (
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
+            <input
+              id="company"
+              type="text"
+              placeholder="e.g., InnovateX Inc."
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition"
+              value={formData.company}
+              onChange={(e) => setFormData({...formData, company: e.target.value})}
+            />
+          </div>
+          <div>
+            <label htmlFor="website" className="block text-sm font-medium text-gray-700 mb-1">Company Website</label>
+            <input
+              id="website"
+              type="url"
+              placeholder="e.g., https://innovatex.com"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition"
+              value={formData.website}
+              onChange={(e) => setFormData({...formData, website: e.target.value})}
+            />
+          </div>
+        </div>
+      ),
+      required: ['company'],
+    },
+    {
+      id: 'revenue',
+      title: "What is your company's monthly revenue range?",
+      subtitle: "This helps us understand your business scale and tailor our services accordingly.",
+      component: () => (
+        <div>
+          <label htmlFor="revenueRange" className="block text-sm font-medium text-gray-700 mb-1">Select Range *</label>
+          <select
+            id="revenueRange"
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition appearance-none bg-white"
+            value={formData.revenueRange}
+            onChange={(e) => setFormData({...formData, revenueRange: e.target.value})}
+          >
+            <option value="" disabled>Select a range</option>
+            <option value="$5000-$10000">$5,000 - $10,000</option>
+            <option value="$15000-$25000">$15,000 - $25,000</option>
+            <option value="$25000-$95000">$25,000 - $95,000</option>
+            <option value="$100000-$200000">$100,000 - $200,000</option>
+            <option value="$200000+">$200,000+</option>
+          </select>
+        </div>
+      ),
+      required: ['revenueRange'],
+    },
+    {
+      id: 'project',
+      title: "What can you tell me about your project?",
+      subtitle: "Share your goals, challenges, or any specific outcomes you're hoping to achieve.",
+      component: () => (
+        <div>
+          <label htmlFor="projectDetails" className="block text-sm font-medium text-gray-700 mb-1">Project Details</label>
+          <textarea
+            id="projectDetails"
+            placeholder="Describe your project, goals, or challenges..."
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition resize-none"
+            rows="4"
+            value={formData.projectDetails}
+            onChange={(e) => setFormData({...formData, projectDetails: e.target.value})}
+          ></textarea>
+        </div>
+      ),
+      required: [],
+    },
+    {
+      id: 'services',
+      title: "Which of our services are you most interested in?",
+      subtitle: "Select one or multiple. We offer comprehensive solutions to elevate your brand presence.",
+      component: () => {
+        const servicesList = [
+          'Brand Management & Consultation',
+          'Interactive Design',
+          'App/Web Development',
+          'Product Packaging',
+          'Print Solution',
+          'New Media & Event Services',
+          'Trainings'
+        ];
 
-    try {
-      // --- IMPORTANT: REPLACE WITH YOUR DEPLOYED BACKEND FUNCTION URL ---
-      // This should point to your serverless function like `/api/calcom-slots` or `https://your-vercel-project.vercel.app/api/calcom-slots`
-      const PROXY_ENDPOINT_URL = '/api/calcom-slots'; // Adjust this path
-      // --- ---
+        const toggleService = (service) => {
+          const currentServices = [...formData.servicesInterested];
+          const index = currentServices.indexOf(service);
+          if (index >= 0) {
+            currentServices.splice(index, 1);
+          } else {
+            currentServices.push(service);
+          }
+          setFormData({ ...formData, servicesInterested: currentServices });
+        };
 
-      const url = new URL(PROXY_ENDPOINT_URL, window.location.origin);
-      url.searchParams.append('eventTypeSlug', eventTypeSlug);
-      // Add other parameters like timezone if needed by your backend/API
+        return (
+          <div className="space-y-3">
+            {servicesList.map((service) => (
+              <button
+                type="button"
+                onClick={() => toggleService(service)}
+                className={`w-full text-left px-4 py-3 rounded-lg border transition duration-200 ease-in-out flex items-center ${
+                  formData.servicesInterested.includes(service)
+                    ? 'bg-black text-white border-black'
+                    : 'bg-white text-gray-700 border-gray-300 hover:border-black'
+                }`}
+              >
+                <div className={`w-5 h-5 rounded-full border flex items-center justify-center mr-3 flex-shrink-0 ${
+                  formData.servicesInterested.includes(service)
+                    ? 'border-white bg-white'
+                    : 'border-gray-400'
+                }`}>
+                  {formData.servicesInterested.includes(service) && (
+                    <svg className="w-3 h-3 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-sm">{service}</span>
+              </button>
+            ))}
+          </div>
+        );
+      },
+      required: [],
+    },
+    {
+      id: 'booking',
+      title: "When would you like to schedule your discovery call?",
+      subtitle: "Select a convenient time slot below.",
+      component: () => {
+        // Mock slots for demonstration - replace with actual fetching logic
+        const mockSlots = [
+          { id: 1, date: '2024-08-05', time: '10:00', utcOffset: '+00:00' },
+          { id: 2, date: '2024-08-05', time: '11:00', utcOffset: '+00:00' },
+          { id: 3, date: '2024-08-06', time: '14:00', utcOffset: '+00:00' },
+        ];
 
-      console.log("Fetching slots from proxy endpoint:", url.toString());
+        const formatDate = (dateStr, timeStr) => {
+          try {
+            const dateTime = new Date(`${dateStr}T${timeStr}:00Z`);
+            return dateTime.toLocaleString([], {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZoneName: 'short'
+            });
+          } catch (e) {
+            return `${dateStr} ${timeStr}`;
+          }
+        };
 
-      const response = await fetch(url.toString());
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to fetch time slots.';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          errorMessage = `Error ${response.status}: ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
-      console.log("Fetched availability data:", data);
-
-      // --- IMPORTANT: ADAPT THIS PROCESSING LOGIC ---
-      // You MUST adjust this part based on the actual structure
-      // of the response returned by your backend proxy function.
-      // The structure depends on how your backend formats the data received from Cal.com.
-      // Example: If your backend returns `data.slots` as an array:
-      let processedSlots = [];
-      if (data && Array.isArray(data.slots)) {
-        processedSlots = data.slots;
-      } else if (Array.isArray(data)) {
-        // Example: If your backend returns the array directly
-        processedSlots = data;
-      }
-      // Ensure slots have unique identifiers if not already present
-      const slotsWithIds = processedSlots.map((slot, index) => ({
-        ...slot,
-        id: slot.id || slot.uid || `slot-${index}` // Adjust ID property name if needed
-      }));
-
-      console.log("Processed slots for display:", slotsWithIds);
-      setAvailableTimeSlots(slotsWithIds);
-
-    } catch (error) {
-      console.error("Error fetching Cal.com slots:", error);
-      setSlotFetchError(error.message || 'An unexpected error occurred while fetching time slots.');
-      setAvailableTimeSlots([]);
-    } finally {
-      setIsFetchingSlots(false);
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Available Times</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {mockSlots.map((slot) => (
+                <button
+                  key={slot.id}
+                  type="button"
+                  onClick={() => setSelectedSlot(slot)}
+                  className={`p-3 rounded-lg border text-left transition ${
+                    selectedSlot && selectedSlot.id === slot.id
+                      ? 'bg-red-500 text-white border-red-500'
+                      : 'border-gray-300 hover:bg-red-500 hover:text-white'
+                  }`}
+                >
+                  {formatDate(slot.date, slot.time)}
+                </button>
+              ))}
+            </div>
+            
+            {selectedSlot && (
+              <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+                <p className="text-sm font-medium">Selected Slot:</p>
+                <p className="text-sm">{formatDate(selectedSlot.date, selectedSlot.time)}</p>
+              </div>
+            )}
+          </div>
+        );
+      },
+      required: [], // Optional selection
+    },
+    {
+      id: 'review',
+      title: "Here's a summary of the information you provided:",
+      subtitle: "Please review and make any necessary changes before submitting.",
+      component: () => (
+        <div className="bg-gray-50 p-5 rounded-lg space-y-3 text-sm">
+          <div className="flex justify-between border-b pb-2">
+            <span className="font-medium text-gray-500">Name:</span>
+            <span>{formData.name || 'Not provided'}</span>
+          </div>
+          <div className="flex justify-between border-b pb-2">
+            <span className="font-medium text-gray-500">Email:</span>
+            <span>{formData.email || 'Not provided'}</span>
+          </div>
+          <div className="flex justify-between border-b pb-2">
+            <span className="font-medium text-gray-500">Phone:</span>
+            <span>{formData.phone || 'Not provided'}</span>
+          </div>
+          <div className="flex justify-between border-b pb-2">
+            <span className="font-medium text-gray-500">Company:</span>
+            <span>{formData.company || 'Not provided'}</span>
+          </div>
+          <div className="flex justify-between border-b pb-2">
+            <span className="font-medium text-gray-500">Website:</span>
+            <span>{formData.website || 'Not provided'}</span>
+          </div>
+          <div className="flex justify-between border-b pb-2">
+            <span className="font-medium text-gray-500">Revenue Range:</span>
+            <span>{formData.revenueRange || 'Not provided'}</span>
+          </div>
+          <div className="border-b pb-2">
+            <div className="font-medium text-gray-500 mb-1">Project Details:</div>
+            <div>{formData.projectDetails || 'Not provided'}</div>
+          </div>
+          <div>
+            <div className="font-medium text-gray-500 mb-1">Services Interested:</div>
+            <div>
+              {formData.servicesInterested.length > 0 
+                ? formData.servicesInterested.join(', ') 
+                : 'None selected'}
+            </div>
+          </div>
+          {selectedSlot && (
+            <div>
+              <div className="font-medium text-gray-500 mb-1">Selected Booking Slot:</div>
+              <div>
+                {(() => {
+                  try {
+                    const dateTime = new Date(`${selectedSlot.date}T${selectedSlot.time}:00Z`);
+                    return dateTime.toLocaleString([], {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZoneName: 'short'
+                    });
+                  } catch (e) {
+                    return `${selectedSlot.date} ${selectedSlot.time}`;
+                  }
+                })()}
+              </div>
+            </div>
+          )}
+        </div>
+      ),
+      required: [],
+    },
+    {
+      id: 'submit',
+      title: "Thanks for sharing those details!",
+      subtitle: "Are you ready to submit your information?",
+      component: () => (
+        <div className="text-center py-4">
+          <div className="flex justify-center mb-4">
+            <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16" />
+          </div>
+          <p className="text-gray-600">We'll be in touch soon to discuss how we can help bring your project to life.</p>
+        </div>
+      ),
+      required: [],
     }
-  };
-
-  // Effect to fetch slots when entering the booking step (assumed to be step index 6)
-  createEffect(() => {
-    if (currentStep() === 6) { // Adjust index if booking step changes
-      if (availableTimeSlots().length === 0 && !isFetchingSlots()) {
-        fetchAvailableSlots('discovery-call'); // Use your actual event type slug
-      }
-    }
-  });
-  // --- END OF FETCHING LOGIC ---
+  ];
 
   // --- Navigation Logic ---
   const nextStep = () => {
+    const currentStepData = steps[currentStep];
+    
     // Basic validation for required fields in the current step
-    if (currentStep() === 1 && (!formData().name || !formData().email || !formData().phone)) {
-      alert('Please fill in all required fields (Name, Email, Phone)');
-      return;
+    if (currentStepData.required && currentStepData.required.length > 0) {
+      let isValid = true;
+      for (const field of currentStepData.required) {
+        const fieldValue = formData[field];
+        if (!fieldValue || (typeof fieldValue === 'string' && fieldValue.trim() === '')) {
+          isValid = false;
+          break;
+        }
+      }
+      
+      if (!isValid) {
+        alert(`Please fill out the required field(s) on this step.`);
+        return; // Stop if validation fails
+      }
     }
-    if (currentStep() === 2 && (!formData().company)) {
-      alert('Please fill in your Company Name');
-      return;
-    }
-    if (currentStep() === 3 && (!formData().revenueRange)) {
-      alert('Please select your Revenue Range');
-      return;
-    }
-    // Add validation for booking step if selecting a slot is mandatory
-    // if (currentStep() === 6 && !formData().selectedTimeSlot) {
-    //   alert('Please select a time slot for your discovery call.');
-    //   return;
-    // }
 
-    if (currentStep() < 7) { // Assuming 8 steps total (0-7)
-      setDirection('forward');
-      setCurrentStep(currentStep() + 1);
+    // Move to next step if validation passes
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
     } else {
-      handleSubmit(); // Submit on final step
+      // On the last step, trigger submission
+      handleSubmit();
     }
   };
 
   const prevStep = () => {
-    if (currentStep() > 0) {
-      setDirection('backward');
-      setCurrentStep(currentStep() - 1);
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
     }
-  };
-
-  // --- Service Selection Logic ---
-  const toggleService = (service) => {
-    setFormData(prev => {
-      const currentServices = [...prev.servicesInterested];
-      const index = currentServices.indexOf(service);
-      if (index >= 0) {
-        currentServices.splice(index, 1);
-      } else {
-        currentServices.push(service);
-      }
-      return { ...prev, servicesInterested: currentServices };
-    });
   };
 
   // --- Submission Logic ---
@@ -166,34 +403,38 @@ const Qualify = () => {
 
     try {
       console.log("Attempting to insert lead into Supabase...");
-
+      
+      // Prepare data for Supabase
       const leadData = {
-        name: formData().name,
-        email: formData().email,
-        phone: formData().phone,
-        company: formData().company,
-        website: formData().website || null,
-        revenue_range: formData().revenueRange,
-        project_details: formData().projectDetails || null,
-        services_interested: formData().servicesInterested,
-        // --- SAVE BOOKING INTENT ---
-        //selected_booking_slot: formData().selectedTimeSlot ? JSON.stringify(formData().selectedTimeSlot) : null,
-        // --- ---
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        company: formData.company,
+        website: formData.website || null,
+        revenue_range: formData.revenueRange,
+        project_details: formData.projectDetails || null,
+        services_interested: JSON.stringify(formData.servicesInterested),
+        // Add selected booking slot if available
+        //selected_booking_slot: selectedSlot ? JSON.stringify(selectedSlot) : null
       };
 
       const { data, error } = await supabase
-        .from('leads') // Make sure this matches your actual table name
+        .from('leads')
         .insert([leadData]);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      console.log('Lead (with booking intent) saved to Supabase:', data);
-      setSubmitMessage('Thank you! Your information and preferred time slot have been submitted successfully.\n\nWe will contact you shortly to confirm your call.');
-
-      // Optional: Reset form or redirect after successful submission
-      // setFormData({ name: '', email: '', ... }); // Reset fields if needed
+      console.log('Lead saved to Supabase:', data);
+      setSubmitMessage('Thank you! Your information has been submitted successfully. We will contact you shortly.');
+      
+      // Optional: Reset form or redirect
+      // setFormData({ name: '', email: '', ... }); 
+      // setCurrentStep(0);
+      
+      // Redirect to thank you page after a delay
+      setTimeout(() => {
+        navigate('/thank-you');
+      }, 2000);
 
     } catch (error) {
       console.error('Error saving lead to Supabase:', error);
@@ -204,381 +445,75 @@ const Qualify = () => {
     }
   };
 
-  // --- Animation Effect (Basic Example) ---
-  let stepContainerRef;
-  createEffect(() => {
-    if (stepContainerRef) {
-      stepContainerRef.style.opacity = 0;
-      setTimeout(() => {
-        if (stepContainerRef) {
-          stepContainerRef.style.opacity = 1;
-        }
-      }, 50); // Small delay to trigger transition
-    }
-  }, [currentStep]); // Re-run effect when currentStep changes
+  // --- Get Current Step Data ---
+  const currentStepData = steps[currentStep];
 
   return (
-    <div class="min-h-screen bg-white text-black">
+    <div className="min-h-screen bg-white text-black">
       <Header />
-      <section class="section-padding max-w-2xl mx-auto px-4">
-        <div class="bg-gray-50 rounded-2xl p-6 md:p-8 shadow-sm">
+      <section className="section-padding max-w-2xl mx-auto px-4">
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 md:p-8">
+          
           {/* Progress Bar */}
-          <div class="mb-8">
-            <div class="flex justify-between text-xs text-gray-500 mb-2">
-              <span>Step {currentStep() + 1}</span>
-              <span>8 total</span>
+          <div className="mb-8">
+            <div className="flex justify-between text-xs text-gray-500 mb-2">
+              <span>Step {currentStep + 1}</span>
+              <span>{steps.length} total</span>
             </div>
-            <div class="w-full bg-gray-200 rounded-full h-1.5">
-              <div
-                class="bg-red-500 h-1.5 rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${((currentStep() + 1) / 8) * 100}%` }}
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div 
+                className="bg-black h-1.5 rounded-full transition-all duration-500 ease-out" 
+                style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
               ></div>
             </div>
           </div>
 
-          {/* Step Content with Fade Effect */}
-          <div
-            ref={stepContainerRef}
-            class="transition-opacity duration-300 ease-in-out"
-          >
-            {/* Step 1: Introduction */}
-            {currentStep() === 0 && (
-              <div class="transition-opacity duration-300">
-                <h1 class="text-3xl font-bold mb-4">Hi there! Let's get started.</h1>
-                <p class="text-gray-600 mb-8">We're excited to learn about your project. This will take just a few minutes.</p>
-                <div class="bg-white p-6 rounded-xl shadow-sm">
-                  <h2 class="text-xl font-semibold mb-4">How it works</h2>
-                  <ul class="space-y-3 text-gray-600">
-                    <li class="flex items-start">
-                      <span class="bg-red-100 text-red-600 rounded-full w-6 h-6 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">1</span>
-                      <span>We'll ask for some basic information about you and your company</span>
-                    </li>
-                    <li class="flex items-start">
-                      <span class="bg-red-100 text-red-600 rounded-full w-6 h-6 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">2</span>
-                      <span>Tell us about your project goals and challenges</span>
-                    </li>
-                    <li class="flex items-start">
-                      <span class="bg-red-100 text-red-600 rounded-full w-6 h-6 flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">3</span>
-                      <span>Select the services you're interested in</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+          {/* Step Content */}
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold mb-3">{currentStepData.title}</h1>
+            {currentStepData.subtitle && (
+              <p className="text-gray-600 mb-6">{currentStepData.subtitle}</p>
             )}
-
-            {/* Step 2: Contact Information */}
-            {currentStep() === 1 && (
-              <div class="transition-opacity duration-300">
-                <h1 class="text-3xl font-bold mb-2">What's your name?</h1>
-                <p class="text-gray-600 mb-6">And how can we reach you?</p>
-                <div class="space-y-4">
-                  <div>
-                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                    <input
-                      id="name"
-                      type="text"
-                      placeholder="e.g., Alex Johnson"
-                      class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                      value={formData().name}
-                      onInput={(e) => setFormData({ ...formData(), name: e.target.value })}
-                      autoFocus
-                    />
-                  </div>
-                  <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-                    <input
-                      id="email"
-                      type="email"
-                      placeholder="e.g., alex@company.com"
-                      class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                      value={formData().email}
-                      onInput={(e) => setFormData({ ...formData(), email: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                    <input
-                      id="phone"
-                      type="tel"
-                      placeholder="e.g., +1 (555) 123-4567"
-                      class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                      value={formData().phone}
-                      onInput={(e) => setFormData({ ...formData(), phone: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Company Information */}
-            {currentStep() === 2 && (
-              <div class="transition-opacity duration-300">
-                <h1 class="text-3xl font-bold mb-2">Tell me about your company.</h1>
-                <p class="text-gray-600 mb-6">This helps us understand your business context.</p>
-                <div class="space-y-4">
-                  <div>
-                    <label for="company" class="block text-sm font-medium text-gray-700 mb-1">Company Name *</label>
-                    <input
-                      id="company"
-                      type="text"
-                      placeholder="e.g., InnovateX Inc."
-                      class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                      value={formData().company}
-                      onInput={(e) => setFormData({ ...formData(), company: e.target.value })}
-                      autoFocus
-                    />
-                  </div>
-                  <div>
-                    <label for="website" class="block text-sm font-medium text-gray-700 mb-1">Company Website</label>
-                    <input
-                      id="website"
-                      type="url"
-                      placeholder="e.g., https://innovatex.com"
-                      class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition"
-                      value={formData().website}
-                      onInput={(e) => setFormData({ ...formData(), website: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Revenue Range */}
-            {currentStep() === 3 && (
-              <div class="transition-opacity duration-300">
-                <h1 class="text-3xl font-bold mb-2">What is your company's monthly revenue range?</h1>
-                <p class="text-gray-600 mb-6">This helps us understand your business scale and tailor our services accordingly.</p>
-                <div>
-                  <label for="revenueRange" class="block text-sm font-medium text-gray-700 mb-1">Select Range *</label>
-                  <select
-                    id="revenueRange"
-                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition appearance-none bg-white"
-                    value={formData().revenueRange}
-                    onInput={(e) => setFormData({ ...formData(), revenueRange: e.target.value })}
-                    autoFocus
-                  >
-                    <option value="" disabled selected>Select a range</option>
-                    <option value="$5000-$10000">$5,000 - $10,000</option>
-                    <option value="$15000-$25000">$15,000 - $25,000</option>
-                    <option value="$25000-$95000">$25,000 - $95,000</option>
-                    <option value="$100000-$200000">$100,000 - $200,000</option>
-                    <option value="$200000+">$200,000+</option>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {/* Step 5: Project Details */}
-            {currentStep() === 4 && (
-              <div class="transition-opacity duration-300">
-                <h1 class="text-3xl font-bold mb-2">What can you tell us about your project?</h1>
-                <p class="text-gray-600 mb-6">Share your goals, challenges, or any specific outcomes you're hoping to achieve.</p>
-                <div>
-                  <label for="projectDetails" class="block text-sm font-medium text-gray-700 mb-1">Project Details</label>
-                  <textarea
-                    id="projectDetails"
-                    placeholder="Describe your project, goals, or challenges..."
-                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 transition resize-none"
-                    rows="5"
-                    value={formData().projectDetails}
-                    onInput={(e) => setFormData({ ...formData(), projectDetails: e.target.value })}
-                    autoFocus
-                  ></textarea>
-                </div>
-              </div>
-            )}
-
-            {/* Step 6: Services Selection */}
-            {currentStep() === 5 && (
-              <div class="transition-opacity duration-300">
-                <h1 class="text-3xl font-bold mb-2">Which of our services are you most interested in?</h1>
-                <p class="text-gray-600 mb-6">Select one or multiple. We offer comprehensive solutions to elevate your brand presence.</p>
-                <div class="space-y-3">
-                  {[
-                    'Brand Management & Consultation',
-                    'Interactive Design',
-                    'App/Web Development',
-                    'Product Packaging',
-                    'Print Solution',
-                    'New Media & Event Services',
-                    'Trainings'
-                  ].map((service) => (
-                    <button
-                      type="button"
-                      onClick={() => toggleService(service)}
-                      class={`w-full text-left px-4 py-3 rounded-lg border transition duration-200 ease-in-out flex items-center ${
-                        formData().servicesInterested.includes(service)
-                          ? 'bg-red-500 text-white border-red-500'
-                          : 'border-gray-300 hover:bg-red-500 hover:text-white'
-                      }`}
-                    >
-                      <div class={`w-5 h-5 rounded-full border flex items-center justify-center mr-3 flex-shrink-0 ${
-                        formData().servicesInterested.includes(service)
-                          ? 'border-white bg-white'
-                          : 'border-gray-400'
-                      }`}>
-                        {formData().servicesInterested.includes(service) && (
-                          <svg class="w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                      <span class="text-sm">{service}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Step 7: Review Information */}
-            {currentStep() === 6 && (
-              <div class="transition-opacity duration-300">
-                <h1 class="text-3xl font-bold mb-2">Here's a summary of the information you provided:</h1>
-                <p class="text-gray-600 mb-6">Please review and make any necessary changes.</p>
-
-                <div class="bg-white p-5 rounded-lg space-y-3 text-sm">
-                  <div class="flex justify-between border-b pb-2">
-                    <span class="font-medium text-gray-500">Name:</span>
-                    <span>{formData().name || 'Not provided'}</span>
-                  </div>
-                  <div class="flex justify-between border-b pb-2">
-                    <span class="font-medium text-gray-500">Email:</span>
-                    <span>{formData().email || 'Not provided'}</span>
-                  </div>
-                  <div class="flex justify-between border-b pb-2">
-                    <span class="font-medium text-gray-500">Phone:</span>
-                    <span>{formData().phone || 'Not provided'}</span>
-                  </div>
-                  <div class="flex justify-between border-b pb-2">
-                    <span class="font-medium text-gray-500">Company:</span>
-                    <span>{formData().company || 'Not provided'}</span>
-                  </div>
-                  <div class="flex justify-between border-b pb-2">
-                    <span class="font-medium text-gray-500">Website:</span>
-                    <span>{formData().website || 'Not provided'}</span>
-                  </div>
-                  <div class="flex justify-between border-b pb-2">
-                    <span class="font-medium text-gray-500">Revenue Range:</span>
-                    <span>{formData().revenueRange || 'Not provided'}</span>
-                  </div>
-                  <div class="border-b pb-2">
-                    <div class="font-medium text-gray-500 mb-1">Project Details:</div>
-                    <div>{formData().projectDetails || 'Not provided'}</div>
-                  </div>
-                  <div>
-                    <div class="font-medium text-gray-500 mb-1">Services Interested:</div>
-                    <div>
-                      {formData().servicesInterested.length > 0
-                        ? formData().servicesInterested.join(', ')
-                        : 'None selected'}
-                    </div>
-                  </div>
-                  {/* --- DISPLAY SELECTED BOOKING SLOT SUMMARY --- */}
-                  {formData().selectedTimeSlot && (
-                    <div class="mt-4 pt-2 border-t border-gray-200">
-                      <div class="font-medium text-gray-500 mb-1">Selected Booking Slot:</div>
-                      <div>
-                        {(() => {
-                          try {
-                            const slot = formData().selectedTimeSlot;
-                            // Adjust date/time formatting based on the actual slot object structure
-                            const dateTimeStr = `${slot.date}T${slot.time}:00Z`; // Assume UTC if no offset
-                            const dateTime = new Date(dateTimeStr);
-                            return dateTime.toLocaleString([], {
-                              weekday: 'long',
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              timeZoneName: 'short'
-                            });
-                          } catch (e) {
-                            console.error("Error formatting selected slot:", e);
-                            return "Selected slot details unavailable";
-                          }
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                  {/* --- --- */}
-                </div>
-              </div>
-            )}
-
-            {/* Step 8: Custom Booking Selection */}
-             {/* Step 8: Schedule Your Call (Embedded Cal.com with Prefill) - REPLACE ENTIRE STEP 8 CONTENT */}
-{currentStep() === 7 && (
-  <div class="transition-opacity duration-300">
-    <h1 class="text-3xl font-bold mb-4">Schedule Your Discovery Call</h1>
-    <p class="text-gray-600 mb-6">Thanks for sharing those details, {formData().name || 'there'}! Let's find a time that works best for you.</p>
-
-    {/* Cal.com Inline Widget Container */}
-    <div class="relative w-full" style="padding-bottom:calc(650px + 1em);"> {/* Responsive container - Adjust height if needed */}
-      {/* --- DYNAMIC IFRAME SRC WITH PREFILL --- */}
-      <iframe
-        src={
-          `https://cal.com/anyanwujedi/discovery-call?` +
-          `name=${encodeURIComponent(formData().name || '')}&` +
-          `email=${encodeURIComponent(formData().email || '')}`
-          // Add more prefill fields if Cal.com supports them, e.g.:
-          // `company=${encodeURIComponent(formData().company || '')}&`
-          // Ensure formData().name and formData().email exist and have values
-        }
-        style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;"
-        frameborder="0"
-        allowfullscreen
-        title="Schedule a meeting with us"
-        // Optional: Add loading="lazy" if iframe is far down the page
-        loading="lazy"
-      ></iframe>
-      {/* --- --- */}
-    </div>
-
-    {/* Optional: Add a note below the widget */}
-    <p class="text-gray-500 text-sm mt-4 text-center">
-      Having trouble? <a href={`mailto:${formData().email || 'youremail@example.com'}`} class="text-red-500 hover:underline">Contact us</a>.
-    </p>
-  </div>
-)}
-{/* --- END OF CAL.COM EMBED CODE REPLACEMENT --- */}
-
+            
+            <div className="mb-8">
+              {currentStepData.component()}
+            </div>
           </div>
 
           {/* Navigation Buttons */}
-          <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+          <div className="flex justify-between items-center">
             <button
               onClick={prevStep}
-              disabled={currentStep() === 0}
-              class={`py-2.5 px-5 rounded-lg border text-sm font-medium transition ${
-                currentStep() === 0
-                  ? 'opacity-50 cursor-not-allowed border-gray-300 text-gray-400'
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+              disabled={currentStep === 0}
+              className={`py-2.5 px-5 rounded-lg border text-sm font-medium transition ${
+                currentStep === 0 
+                  ? 'opacity-50 cursor-not-allowed border-gray-300 text-gray-400' 
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
               Back
             </button>
 
-            {currentStep() < 7 ? ( // Assuming 8 steps (0-7)
+            {currentStep < steps.length - 1 ? (
               <button
                 onClick={nextStep}
-                class="bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 px-6 rounded-lg transition duration-300 text-sm"
+                className="bg-black hover:bg-gray-800 text-white font-medium py-2.5 px-6 rounded-lg transition duration-300 text-sm"
               >
                 Continue
               </button>
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={isSubmitting()}
-                class={`bg-red-500 hover:bg-red-600 text-white font-medium py-2.5 px-6 rounded-lg transition duration-300 text-sm flex items-center ${
-                  isSubmitting() ? 'opacity-75 cursor-not-allowed' : ''
+                disabled={isSubmitting}
+                className={`bg-black hover:bg-gray-800 text-white font-medium py-2.5 px-6 rounded-lg transition duration-300 text-sm flex items-center ${
+                  isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
                 }`}
               >
-                {isSubmitting() ? (
+                {isSubmitting ? (
                   <>
-                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     Submitting...
                   </>
@@ -588,13 +523,13 @@ const Qualify = () => {
           </div>
 
           {/* Submission Message */}
-          {submitMessage() && (
-            <div class={`mt-6 p-4 rounded-lg text-center text-sm ${
-              submitMessage().includes('Thank you')
-                ? 'bg-green-100 text-green-700 border border-green-200'
+          {submitMessage && (
+            <div className={`mt-6 p-4 rounded-lg text-center text-sm ${
+              submitMessage.includes('Thank you') 
+                ? 'bg-green-100 text-green-700 border border-green-200' 
                 : 'bg-red-100 text-red-700 border border-red-200'
             }`}>
-              {submitMessage()}
+              {submitMessage}
             </div>
           )}
         </div>
