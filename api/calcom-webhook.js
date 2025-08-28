@@ -1,5 +1,5 @@
 // api/calcom-webhook.js (Vercel Serverless Function example)
-import { supabase } from 'supabaseServerClient'; // Adjust path
+import { supabase } from './supabaseServerClient'; // Adjust path
 
 export default async function handler(request, response) {
   if (request.method !== 'POST') {
