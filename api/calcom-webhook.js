@@ -1,5 +1,5 @@
 // api/calcom-webhook.js (Vercel Serverless Function example)
-import { supabase } from '../src/lib/supabaseClient'; // Adjust path as needed
+import { supabase } from '../src/lib/supabaseClient.js'; // Adjust path as needed
 
 // IMPORTANT: Store your Cal.com webhook signing secret in Vercel environment variables
 // Add CALCOM_WEBHOOK_SECRET=your_actual_secret to Vercel project settings
