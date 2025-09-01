@@ -48,7 +48,7 @@ export default async function handler(request, response) {
     // --- ---
     
     // Parse the JSON payload from Cal.com
-    const payload = await request.json(); // Use request.body if your framework parses it automatically
+    const payload = await JSON.parse(); // Use request.body if your framework parses it automatically
     const eventType = payload.triggerEvent || payload.type; // Check Cal.com docs for exact field
     
     console.log(`Received Cal.com webhook event: ${eventType}`);
