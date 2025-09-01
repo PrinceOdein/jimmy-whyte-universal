@@ -16,6 +16,7 @@ const Qualify = () => {
     revenueRange: '',
     projectDetails: '',
     servicesInterested: [],
+    bookingPreference: '', // New field for booking preference
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
@@ -218,65 +219,32 @@ const Qualify = () => {
       },
       required: [],
     },
-    {
-      id: 'booking',
-      title: "When would you like to schedule your discovery call?",
-      subtitle: "Select a convenient time slot below.",
-      component: () => {
-        // Mock slots for demonstration - replace with actual fetching logic
-        const mockSlots = [
-          { id: 1, date: '2024-08-05', time: '10:00', utcOffset: '+00:00' },
-          { id: 2, date: '2024-08-05', time: '11:00', utcOffset: '+00:00' },
-          { id: 3, date: '2024-08-06', time: '14:00', utcOffset: '+00:00' },
-        ];
-
-        const formatDate = (dateStr, timeStr) => {
-          try {
-            const dateTime = new Date(`${dateStr}T${timeStr}:00Z`);
-            return dateTime.toLocaleString([], {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              timeZoneName: 'short'
-            });
-          } catch (e) {
-            return `${dateStr} ${timeStr}`;
-          }
-        };
-
-        return (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Available Times</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {mockSlots.map((slot) => (
-                <button
-                  key={slot.id}
-                  type="button"
-                  onClick={() => setSelectedSlot(slot)}
-                  className={`p-3 rounded-lg border text-left transition ${
-                    selectedSlot && selectedSlot.id === slot.id
-                      ? 'bg-red-500 text-white border-red-500'
-                      : 'border-gray-300 hover:bg-red-500 hover:text-white'
-                  }`}
-                >
-                  {formatDate(slot.date, slot.time)}
-                </button>
-              ))}
-            </div>
-            
-            {selectedSlot && (
-              <div className="mt-4 p-3 bg-gray-100 rounded-lg">
-                <p className="text-sm font-medium">Selected Slot:</p>
-                <p className="text-sm">{formatDate(selectedSlot.date, selectedSlot.time)}</p>
-              </div>
-            )}
-          </div>
-        );
-      },
-      required: [], // Optional selection
-    },
+  {
+    id: 'booking',
+    title: "When would you like to schedule your discovery call?",
+    subtitle: "Let us know your availability so we can coordinate a convenient time.",
+    component: () => (
+      <div>
+        <label for="bookingPreference" class="block text-sm font-medium text-gray-700 mb-1">
+          Preferred Timeframe or Date (e.g., 'Next Week', 'Tuesday Afternoon', 'ASAP')
+        </label>
+        <input
+          id="bookingPreference"
+          type="text"
+          placeholder="e.g., Next Week, Tuesday Afternoon, ASAP"
+          class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition"
+          value={formData().bookingPreference}
+          onInput={(e) => setFormData({ ...formData(), bookingPreference: e.target.value })}
+          autoFocus
+        />
+        {/* Optional: Add more specific date/time pickers or instructions */}
+        <p class="text-gray-500 text-sm mt-2">
+          We'll use this information to find a time that works best for you when we contact you.
+        </p>
+      </div>
+    ),
+    required: [], // Optional, but good to collect
+  },
     {
       id: 'review',
       title: "Here's a summary of the information you provided:",
@@ -319,7 +287,12 @@ const Qualify = () => {
                 : 'None selected'}
             </div>
           </div>
-          {selectedSlot && (
+          <div className="border-b pb-2">
+            <div className="font-medium text-gray-500 mb-1">Preferred Booking:</div>
+            <div>{formData.bookingPreference || 'Not provided'}</div>
+          </div>
+
+          {/* {selectedSlot && (
             <div>
               <div className="font-medium text-gray-500 mb-1">Selected Booking Slot:</div>
               <div>
@@ -341,7 +314,7 @@ const Qualify = () => {
                 })()}
               </div>
             </div>
-          )}
+          )} */}
         </div>
       ),
       required: [],
@@ -417,7 +390,7 @@ const Qualify = () => {
         project_details: formData.projectDetails || null,
         services_interested: JSON.stringify(formData.servicesInterested),
         // Add selected booking slot if available
-        //selected_booking_slot: selectedSlot ? JSON.stringify(selectedSlot) : null
+        booking_preference: formData.bookingPreference || null
       };
 
       const { data, error } = await supabase
