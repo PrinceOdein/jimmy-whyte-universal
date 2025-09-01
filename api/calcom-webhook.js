@@ -1,122 +1,124 @@
-// api/calcom-webhook.js (Vercel Serverless Function example)
+// api/calcom-webhook.js (Vercel Serverless Function - Corrected Body Parsing)
 import { supabase } from '../src/lib/supabaseClient.js'; // Adjust path as needed
-
-// IMPORTANT: Store your Cal.com webhook signing secret in Vercel environment variables
-// Add CALCOM_WEBHOOK_SECRET=your_actual_secret to Vercel project settings
 const WEBHOOK_SECRET = process.env.CALCOM_WEBHOOK_SECRET;
 
-// --- Helper function to verify webhook signature (implement based on Cal.com docs) ---
-// This is crucial for security to ensure the request is genuinely from Cal.com
-// The exact implementation depends on Cal.com's signature method (usually HMAC SHA256)
-// Example (conceptual, you MUST implement according to Cal.com's documentation):
-/*
-function verifySignature(payload, signatureHeader, secret) {
-  // 1. Get raw body (might require special handling in serverless functions)
-  // 2. Create HMAC SHA256 hash of payload using secret
-  // 3. Compare computed hash with signatureHeader
-  // 4. Return true if they match, false otherwise
-  // Example using Node's crypto library:
-  // const crypto = require('crypto');
-  // const expectedSignature = crypto
-  //   .createHmac('sha256', secret)
-  //   .update(payload, 'utf8')
-  //   .digest('hex');
-  // return crypto.timingSafeEqual(Buffer.from(signatureHeader, 'hex'), Buffer.from(expectedSignature, 'hex'));
-  
-  // Placeholder for now - replace with actual implementation
-  // For testing without verification (NOT recommended for production):
-  return true; 
-}
-*/
-// --- ---
-
 export default async function handler(request, response) {
-  // Only accept POST requests
+  // --- ONLY ACCEPT POST REQUESTS ---
   if (request.method !== 'POST') {
     response.setHeader('Allow', ['POST']);
     return response.status(405).json({ error: 'Method Not Allowed' });
   }
+  // --- ---
 
   try {
-    // --- SECURITY: Verify Webhook Signature ---
-    // const signature = request.headers['x-cal-signature']; // Or whatever header Cal.com uses
-    // const rawBody = await getRawBody(request); // You need the raw body for signature verification
-    // if (!verifySignature(rawBody, signature, WEBHOOK_SECRET)) {
-    //   console.warn('Invalid Cal.com webhook signature');
-    //   return response.status(401).json({ error: 'Unauthorized' });
-    // }
-    // --- ---
+    // --- CORRECTLY PARSE THE INCOMING JSON BODY ---
+    // Vercel's default Node.js runtime provides the parsed body in `request.body`
+    // if the request has Content-Type: application/json.
+    // However, it's safer to explicitly parse it or handle raw body for verification.
     
-    // Parse the JSON payload from Cal.com
-    const payload = await JSON.parse(); // Use request.body if your framework parses it automatically
-    const eventType = payload.triggerEvent || payload.type; // Check Cal.com docs for exact field
+    let payload;
+    // Check if Vercel already parsed it (common case)
+    if (request.body) {
+      console.log("Vercel auto-parsed request body");
+      payload = request.body;
+    } else {
+      // If not parsed, read raw body and parse manually
+      console.log("Manually parsing request body");
+      const chunks = [];
+      for await (const chunk of request) {
+        chunks.push(chunk);
+      }
+      const rawBody = Buffer.concat(chunks).toString('utf-8');
+      payload = JSON.parse(rawBody);
+    }
     
+    const eventType = payload.triggerEvent || payload.type; // Check Cal.com docs for exact field name
+
     console.log(`Received Cal.com webhook event: ${eventType}`);
-    
-    // Handle the BOOKING_CREATED event
+    console.log("Full webhook payload:", JSON.stringify(payload, null, 2)); // Log for inspection
+    // --- ---
+
+    // --- HANDLE BOOKING CREATED EVENT ---
     if (eventType === 'BOOKING_CREATED') {
       const bookingData = payload.payload; // This contains the booking details
-      
-      // --- EXTRACT BOOKING INFORMATION ---
-      // Adapt field names based on actual Cal.com payload structure
-      const supabaseBookingRecord = {
-        calcom_booking_uid: bookingData.uid, // Unique identifier for the booking
+
+      // --- EXTRACT & MAP BOOKING DATA TO YOUR SUPABASE SCHEMA ---
+      // IMPORTANT: You MUST adapt these field mappings based on the actual structure
+      // of the data Cal.com sends in the webhook payload.
+      // Check your Cal.com dashboard or test the webhook to see the exact structure.
+      const extractedBookingInfo = {
+        // --- CORE BOOKING DETAILS ---
+        calcom_booking_uid: bookingData.uid || bookingData.id || null, // Unique identifier
         start_time: bookingData.startTime || bookingData.start || null, // ISO 8601 format
         end_time: bookingData.endTime || bookingData.end || null, // ISO 8601 format
+        title: bookingData.title || bookingData.eventType?.title || null, // Meeting title
+        description: bookingData.description || bookingData.eventType?.description || null, // Description
+        location: bookingData.locationUrl || bookingData.location?.url || null, // Meeting URL/Location
+        // --- ATTENDEE DETAILS ---
         attendee_name: bookingData.attendee?.name || bookingData.attendees?.[0]?.name || bookingData.responses?.name || null,
         attendee_email: bookingData.attendee?.email || bookingData.attendees?.[0]?.email || bookingData.responses?.email || null,
-        meeting_url: bookingData.locationUrl || bookingData.location?.url || null, // Link to the meeting
-        title: bookingData.title || bookingData.eventType?.title || null, // Title of the event
-        // Add more fields from bookingData as needed
+        attendee_timezone: bookingData.attendee?.timeZone || bookingData.attendees?.[0]?.timeZone || null,
+        // --- ORGANIZER DETAILS (if needed) ---
+        organizer_email: bookingData.organizer?.email || null,
+        // --- ADD MORE FIELDS AS NEEDED BASED ON CAL.COM PAYLOAD ---
+        // You can log the full payload to see all available fields
+        // raw_webhook_data: JSON.stringify(payload) // Optional: Store full payload for debugging
       };
       // --- ---
-      
-      // --- CORRELATE BOOKING TO LEAD ---
-      // Find the lead in Supabase using the attendee's email
+
+      // --- CORRELATE BOOKING TO LEAD IN SUPABASE ---
+      // Find the corresponding lead using the attendee's email
       let leadId = null;
-      const attendeeEmail = supabaseBookingRecord.attendee_email;
-      
+      const attendeeEmail = extractedBookingInfo.attendee_email;
+
       if (attendeeEmail) {
+        // Query Supabase to find the lead with the matching email
         const { data: leadData, error: fetchError } = await supabase
-          .from('leads')
-          .select('id')
-          .eq('email', attendeeEmail) // Assuming 'email' is the column name in 'leads'
+          .from('leads') // Your leads table name
+          .select('id') // Only select the ID
+          .eq('email', attendeeEmail) // Match by email
           .single(); // Expecting one result
-        
+
         if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = "Results contain 0 rows"
           console.error("Error fetching lead for booking correlation:", fetchError);
           // Decide how to handle: log error, proceed without lead link, etc.
+          // For now, we'll proceed but log the issue
         } else if (leadData) {
           leadId = leadData.id;
           console.log(`Found lead ID ${leadId} for email ${attendeeEmail}`);
         } else {
           console.log(`No lead found with email ${attendeeEmail} for booking correlation.`);
+          // The booking is still valid, just not linked to a lead in our DB
         }
       }
-      
-      // Add lead_id to the booking record if found
-      if (leadId) {
-        supabaseBookingRecord.lead_id = leadId;
-      }
       // --- ---
-      
-      // --- INSERT BOOKING INTO SUPABASE ---
-      const { data: bookingInsertData, error: bookingInsertError } = await supabase
-        .from('bookings') // Your bookings table name
+
+      // --- PREPARE DATA FOR SUPABASE INSERTION ---
+      const supabaseBookingRecord = {
+        ...extractedBookingInfo,
+        lead_id: leadId, // This creates the link between booking and lead (nullable if no lead found)
+        created_at: new Date().toISOString() // Add timestamp
+      };
+      // --- ---
+
+      // --- INSERT BOOKING RECORD INTO SUPABASE ---
+      const { data: insertData, error: insertError } = await supabase
+        .from('bookings') // Your bookings table name (make sure it exists!)
         .insert([supabaseBookingRecord])
         .select(); // Often returns the inserted record
-      
-      if (bookingInsertError) throw bookingInsertError;
-      
-      console.log('Booking recorded in Supabase:', bookingInsertData);
+
+      if (insertError) throw insertError;
+
+      console.log('Booking successfully recorded in Supabase:', insertData);
       
       // --- OPTIONAL: UPDATE LEAD STATUS ---
+      // If you found a lead, you might want to update its status
       if (leadId) {
         const { error: updateError } = await supabase
           .from('leads')
           .update({ 
-            booking_status: 'scheduled', // Add this column to 'leads' table if it doesn't exist
-            // booking_id: bookingInsertData[0]?.id // Optional: link booking ID directly in leads table
+            booking_status: 'scheduled' // Add this column to 'leads' table if it doesn't exist
+            // You could also store the booking ID: booking_id: insertData[0]?.id
           })
           .eq('id', leadId);
           
@@ -128,13 +130,16 @@ export default async function handler(request, response) {
       }
       // --- ---
       
+      // Respond to Cal.com to acknowledge receipt
       return response.status(200).json({ message: 'Booking recorded successfully' });
+      
     } else {
-      // Handle other event types if needed (e.g., BOOKING_CANCELLED)
+      // Handle other event types if needed (e.g., BOOKING_CANCELLED, BOOKING_RESCHEDULED)
       console.log(`Unhandled Cal.com event type: ${eventType}`);
       return response.status(200).json({ message: `Event ${eventType} processed (ignored)` });
     }
-    
+    // --- ---
+
   } catch (error) {
     console.error('Error processing Cal.com webhook:', error);
     // It's often better to return 200 OK to prevent Cal.com from retrying indefinitely on errors,
